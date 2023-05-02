@@ -68,7 +68,6 @@ jobs:
       matrix:
         elasticsearch:
           - 8.7.0
-          - 7.17.0
     steps:
 
       # Checkout the repository.

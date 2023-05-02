@@ -25,7 +25,6 @@ jobs:
       matrix:
         elasticsearch:
           - 8.7.0
-          - 7.17.0
 
     # Use the latest LTS OS.
     runs-on: ubuntu-20.04
