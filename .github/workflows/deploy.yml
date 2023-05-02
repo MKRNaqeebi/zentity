@@ -81,7 +81,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v1
         with:
-          java-version: 18
+          java-version: 17
 
       # Cache Maven packages.
       # Uses: https://github.com/actions/cache
