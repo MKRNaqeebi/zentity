@@ -1,6 +1,6 @@
 /*
  * zentity
- * Copyright © 2018-2022 Dave Moore
+ * Copyright © 2018-2023 Dave Moore
  * https://zentity.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -121,29 +121,29 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
 
             // Handle known types of errors.
             if (e instanceof ForbiddenException) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.FORBIDDEN, e));
+                channel.sendResponse(new RestResponse(channel, RestStatus.FORBIDDEN, e));
             } else if (e instanceof ValidationException) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.BAD_REQUEST, e));
+                channel.sendResponse(new RestResponse(channel, RestStatus.BAD_REQUEST, e));
             } else if (e instanceof NotFoundException) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.NOT_FOUND, e));
+                channel.sendResponse(new RestResponse(channel, RestStatus.NOT_FOUND, e));
             } else if (e instanceof NotImplementedException) {
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.NOT_IMPLEMENTED, e));
+                channel.sendResponse(new RestResponse(channel, RestStatus.NOT_IMPLEMENTED, e));
             } else if (e instanceof ElasticsearchException) {
                 // Any other ElasticsearchException which has its own status code.
-                channel.sendResponse(new BytesRestResponse(channel, ((ElasticsearchException) e).status(), e));
+                channel.sendResponse(new RestResponse(channel, ((ElasticsearchException) e).status(), e));
             } else {
                 // Log the stack trace for unexpected types of errors.
                 logger.catching(e);
-                channel.sendResponse(new BytesRestResponse(channel, RestStatus.INTERNAL_SERVER_ERROR, e));
+                channel.sendResponse(new RestResponse(channel, RestStatus.INTERNAL_SERVER_ERROR, e));
             }
         } catch (Exception ee) {
 
             // Unexpected error when processing the exception object.
-            // Since BytesRestResponse throws IOException, build this response object as a string
+            // Since RestResponse throws IOException, build this response object as a string
             // to handle any IOException that find its way here.
             logger.catching(ee);
             String message = "{\"error\":{\"root_cause\":[{\"type\":\"exception\",\"reason\":" + Json.quoteString(ee.getMessage()) + "}],\"type\":\"exception\",\"reason\":" + Json.quoteString(ee.getMessage()) + "},\"status\":500}";
-            channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR, message));
+            channel.sendResponse(new RestResponse(RestStatus.INTERNAL_SERVER_ERROR, message));
         }
     }
 
@@ -155,7 +155,7 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
      * @param content The content to process and return.
      */
     protected static void sendResponse(RestChannel channel, RestStatus statusCode, XContentBuilder content) {
-        channel.sendResponse(new BytesRestResponse(statusCode, content));
+        channel.sendResponse(new RestResponse(statusCode, content));
     }
 
     /**
@@ -177,7 +177,7 @@ public class ZentityPlugin extends Plugin implements ActionPlugin {
      * @param json    The JSON string to process and return.
      */
     protected static void sendResponse(RestChannel channel, RestStatus statusCode, String json) {
-        channel.sendResponse(new BytesRestResponse(statusCode, "application/json", json));
+        channel.sendResponse(new RestResponse(statusCode, "application/json", json));
     }
 
     /**

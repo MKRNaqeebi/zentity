@@ -1,6 +1,6 @@
 /*
  * zentity
- * Copyright © 2018-2022 Dave Moore
+ * Copyright © 2018-2023 Dave Moore
  * https://zentity.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,15 +28,15 @@ import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ElasticsearchSecurityException;
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.ActionResponse;
+import org.elasticsearch.action.admin.indices.alias.get.GetAliasesResponse;
 import org.elasticsearch.action.admin.indices.create.CreateIndexResponse;
-import org.elasticsearch.action.admin.indices.exists.indices.IndicesExistsResponse;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.support.WriteRequest;
-import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.client.internal.node.NodeClient;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.xcontent.ToXContent;
 import org.elasticsearch.xcontent.XContentBuilder;
@@ -153,11 +153,11 @@ public class ModelsAction extends BaseRestHandler {
     public static void ensureIndex(NodeClient client, ActionListener<ActionResponse> onComplete) {
 
         // Check if the .zentity-model index exists.
-        client.admin().indices().prepareExists(INDEX_NAME).execute(new ActionListener<>() {
+        client.admin().indices().prepareGetAliases(INDEX_NAME).execute(new ActionListener<>() {
 
             @Override
-            public void onResponse(IndicesExistsResponse response) {
-                if (!response.isExists()) {
+            public void onResponse(GetAliasesResponse response) {
+                if (!response.getAliases().isEmpty()) {
 
                     // The index does not exist. Create it.
                     createIndex(client, new ActionListener<>() {
@@ -279,7 +279,7 @@ public class ModelsAction extends BaseRestHandler {
     public static void getEntityModel(String entityType, NodeClient client, ActionListener<GetResponse> onComplete) {
 
         // Retrieve one entity model from the .zentity-models index.
-        client.prepareGet(INDEX_NAME, "doc", entityType).execute(new ActionListener<>() {
+        client.prepareGet().execute(new ActionListener<>() {
 
             @Override
             public void onResponse(GetResponse response) {
@@ -368,7 +368,7 @@ public class ModelsAction extends BaseRestHandler {
                     WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.WAIT_UNTIL;
                     if (isBulkRequest)
                         refreshPolicy = WriteRequest.RefreshPolicy.NONE;
-                    client.prepareIndex(INDEX_NAME, "doc", entityType)
+                    client.prepareIndex(INDEX_NAME)
                             .setSource(requestBody, XContentType.JSON)
                             .setCreate(true)
                             .setRefreshPolicy(refreshPolicy)
@@ -428,7 +428,7 @@ public class ModelsAction extends BaseRestHandler {
                     WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.WAIT_UNTIL;
                     if (isBulkRequest)
                         refreshPolicy = WriteRequest.RefreshPolicy.NONE;
-                    client.prepareIndex(INDEX_NAME, "doc", entityType)
+                    client.prepareIndex(INDEX_NAME)
                             .setSource(requestBody, XContentType.JSON)
                             .setCreate(false)
                             .setRefreshPolicy(refreshPolicy)
@@ -483,7 +483,7 @@ public class ModelsAction extends BaseRestHandler {
                     WriteRequest.RefreshPolicy refreshPolicy = WriteRequest.RefreshPolicy.WAIT_UNTIL;
                     if (isBulkRequest)
                         refreshPolicy = WriteRequest.RefreshPolicy.NONE;
-                    client.prepareDelete(INDEX_NAME, "doc", entityType)
+                    client.prepareDelete()
                             .setRefreshPolicy(refreshPolicy)
                             .execute(onComplete);
                 } catch (Exception e) {

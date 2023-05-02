@@ -1,6 +1,6 @@
 /*
  * zentity
- * Copyright © 2018-2022 Dave Moore
+ * Copyright © 2018-2023 Dave Moore
  * https://zentity.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,10 @@ import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.search.SearchModule;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -49,7 +52,7 @@ public class Query {
 
     private final String indexName;
     private final int number;
-    private final String query;
+    private final InputStream query;
     private final SearchRequestBuilder request;
     private final List<String> resolvers;
     private TreeMap<String, TreeMap> resolversFilterTree = new TreeMap<>();
@@ -395,12 +398,12 @@ public class Query {
      * @return The built search request.
      * @throws IOException
      */
-    public static SearchRequestBuilder buildSearchRequest(Job job, String indexName, String query) throws IOException {
+    public static SearchRequestBuilder buildSearchRequest(Job job, String indexName, InputStream query) throws IOException {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        SearchModule searchModule = new SearchModule(Settings.EMPTY, false, Collections.emptyList());
+        SearchModule searchModule = new SearchModule(Settings.EMPTY, Collections.emptyList());
         try (XContentParser parser = XContentFactory.xContent(XContentType.JSON).createParser(new NamedXContentRegistry(searchModule
                 .getNamedXContents()), DeprecationHandler.THROW_UNSUPPORTED_OPERATION, query)) {
-            searchSourceBuilder.parseXContent(parser);
+            searchSourceBuilder.parseXContent(parser, false);
         }
         SearchRequestBuilder searchRequestBuilder = new SearchRequestBuilder(job.client(), SearchAction.INSTANCE);
         searchRequestBuilder.setIndices(indexName).setSource(searchSourceBuilder);
@@ -752,7 +755,9 @@ public class Query {
             topLevelClauses.add("\"version\":true");
 
         // Construct the final query and add it to the search queue for this hop.
-        this.query = "{" + String.join(",", topLevelClauses) + "}";
+        String str = "{" + String.join(",", topLevelClauses) + "}";
+        this.query = new ByteArrayInputStream(str.getBytes(StandardCharsets.UTF_8));
+
         this.request = buildSearchRequest(job, indexName, this.query);
     }
 
@@ -760,7 +765,7 @@ public class Query {
         return this.indexName;
     }
 
-    public String query() {
+    public InputStream query() {
         return this.query;
     }
 

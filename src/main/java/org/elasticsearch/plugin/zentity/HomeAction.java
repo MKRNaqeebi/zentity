@@ -1,6 +1,6 @@
 /*
  * zentity
- * Copyright © 2018-2022 Dave Moore
+ * Copyright © 2018-2023 Dave Moore
  * https://zentity.io
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,12 @@
  */
 package org.elasticsearch.plugin.zentity;
 
-import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.client.internal.node.NodeClient;
 import org.elasticsearch.xcontent.XContentBuilder;
 import org.elasticsearch.xcontent.XContentFactory;
 import org.elasticsearch.rest.BaseRestHandler;
-import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestRequest;
+import org.elasticsearch.rest.RestResponse;
 import org.elasticsearch.rest.RestStatus;
 
 import java.util.List;
@@ -64,7 +64,7 @@ public class HomeAction extends BaseRestHandler {
             content.field("elasticsearch", props.getProperty("elasticsearch.version"));
             content.endObject();
             content.endObject();
-            channel.sendResponse(new BytesRestResponse(RestStatus.OK, content));
+            channel.sendResponse(new RestResponse(RestStatus.OK, content));
         };
     }
 }
