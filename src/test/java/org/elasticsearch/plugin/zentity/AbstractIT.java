@@ -23,17 +23,14 @@ import org.apache.http.HttpHost;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Ignore;
-import org.testcontainers.containers.DockerComposeContainer;
-import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.containers.BindMode;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.utility.DockerImageName;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.Duration;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeFalse;
@@ -41,40 +38,49 @@ import static org.junit.Assume.assumeFalse;
 @Ignore("Base class")
 public abstract class AbstractIT {
 
-    public final static String SERVICE_NAME = "es01";
-    public final static int SERVICE_PORT = 9400;
+    public final static int SERVICE_PORT = 9200;
 
-    // A docker-compose cluster used for all test cases in the test class.
-    private static DockerComposeContainer cluster;
+    // Run elasticsearch in a generic docker container.
+    @ClassRule
+    // public static GenericContainer<?> cluster;
+    public static GenericContainer<?> cluster = new GenericContainer<>(
+        DockerImageName.parse("docker.elastic.co/elasticsearch/elasticsearch:8.7.0"))
+        .withEnv("BUILD_DIRECTORY", System.getenv("BUILD_DIRECTORY"))
+        .withEnv("ELASTICSEARCH_VERSION", System.getenv("ELASTICSEARCH_VERSION"))
+        .withEnv("ZENTITY_VERSION", System.getenv("ZENTITY_VERSION"))
+        .withEnv("http.port", "9200")
+        .withEnv("transport.tcp.port", "9300")
+        // -e "discovery.type=single-node" \
+        .withEnv("discovery.type", "single-node")
+        // .withEnv("ES_JAVA_OPTS", "-Xms512m -Xmx512m -ea")
+        .withEnv("xpack.security.enabled", "false")
+        // .withEnv("action.destructive_requires_name", "false")
+        .withFileSystemBind(
+            "data01", "/usr/share/elasticsearch/data", BindMode.READ_WRITE)
+        .withFileSystemBind(
+            System.getenv("BUILD_DIRECTORY")+"/releases/", "/releases", BindMode.READ_WRITE)
+        .withReuse(true)
+        .withExposedPorts(9200, 9300);
 
     // Client that communicates with the docker-compose cluster.
     private static RestClient client;
 
-    @BeforeClass
-    public static void setup() throws Exception {
+    @Before
+    public void setup() throws Exception {
         createCluster();
         createClient();
     }
 
-    @AfterClass
-    public static void tearDown() throws IOException {
-        destroyClient();
-        destroyCluster();
-    }
+    // @After
+    // public void tearDown() throws IOException {
+    //     destroyClient();
+    //     destroyCluster();
+    // }
 
     /**
      * Create the cluster if it doesn't exist.
      */
     public static void createCluster() {
-        Path path = Paths.get(System.getenv("BUILD_DIRECTORY"), "test-classes", "docker-compose.yml");
-        cluster = new DockerComposeContainer(new File(path.toString()))
-                .withEnv("BUILD_DIRECTORY", System.getenv("BUILD_DIRECTORY"))
-                .withEnv("ELASTICSEARCH_VERSION", System.getenv("ELASTICSEARCH_VERSION"))
-                .withEnv("ZENTITY_VERSION", System.getenv("ZENTITY_VERSION"))
-                .withExposedService(SERVICE_NAME, SERVICE_PORT,
-                        Wait.forHttp("/_cat/health")
-                                .forStatusCodeMatching(it -> it >= 200 && it < 300)
-                                .withReadTimeout(Duration.ofSeconds(120)));
         cluster.start();
     }
 
@@ -92,26 +98,21 @@ public abstract class AbstractIT {
      * Create the client if it doesn't exist.
      */
     public static void createClient() throws IOException {
-
         // The client configuration depends on the cluster implementation,
         // so create the cluster first if it hasn't already been created.
         if (cluster == null)
             createCluster();
-      
         try {
-
             // Create the client.
-            String host = cluster.getServiceHost(SERVICE_NAME, SERVICE_PORT);
-            Integer port = cluster.getServicePort(SERVICE_NAME, SERVICE_PORT);
-            client = RestClient.builder(new HttpHost(host, port)).build();
+            String host = cluster.getHost();
+            // Integer port = cluster.getMappedPort(SERVICE_PORT);
+            client = RestClient.builder(new HttpHost(host, SERVICE_PORT)).build();
 
             // Verify if the client can establish a connection to the cluster.
             Response response = client.performRequest(new Request("GET", "/"));
             JsonNode json = Json.MAPPER.readTree(response.getEntity().getContent());
             assertEquals("You Know, for Search", json.get("tagline").textValue());
-
         } catch (IOException e) {
-
             // If we have an exception here, let's ignore the test.
             destroyClient();
             assumeFalse("Integration tests are skipped", e.getMessage().contains("Connection refused"));

@@ -672,15 +672,15 @@ public class ResolutionActionIT extends AbstractIT {
         return docsActual;
     }
 
-    @BeforeClass
-    public static void setup() throws Exception {
-        prepareTestResources();
-    }
+    // @BeforeClass
+    // public void setup() throws Exception {
+    //     prepareTestResources();
+    // }
 
-    @AfterClass
-    public static void destroy() throws Exception {
-        destroyTestResources();
-    }
+    // @AfterClass
+    // public void destroy() throws Exception {
+    //     destroyTestResources();
+    // }
 
     @Test
     public void testJobNoScope() throws Exception {
